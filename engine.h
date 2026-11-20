@@ -4,36 +4,31 @@
 #define MAX_NODES 12
 #define MAX_AMBULANCES 16
 #define MAX_HOSPITALS 16
-#define INF 1000000000
+#define INF 999999
 
 typedef struct {
-    int id;
     char name[32];
+    int location;
     int available;
-    int currentNode;
 } Ambulance;
 
 typedef struct {
-    int id;
     char name[48];
-    int node;
-    int availableBeds;
-    int emergencyOpen;
+    int location;
+    int beds;
 } Hospital;
 
 typedef struct {
-    int dist[MAX_NODES];
-    int prev[MAX_NODES];
-    int explored;
-} DijkstraResult;
+    int distance[MAX_NODES];
+    int previous[MAX_NODES];
+} ShortestPath;
 
-DijkstraResult dijkstra(int graph[MAX_NODES][MAX_NODES], int source);
-int reconstruct_path(const DijkstraResult *result, int source, int target,
-                     int path[MAX_NODES]);
-void insertion_sort_candidates(int ids[], int scores[], int count);
-int select_ambulance(int graph[MAX_NODES][MAX_NODES], Ambulance ambulances[],
-                     int count, int patientNode, int *distance);
-int select_hospital(int graph[MAX_NODES][MAX_NODES], Hospital hospitals[],
-                    int count, int patientNode, int *distance);
+ShortestPath dijkstra(int graph[MAX_NODES][MAX_NODES], int start);
+int get_path(ShortestPath result, int start, int end, int path[]);
+void sort_by_distance(int indexes[], int distances[], int count);
+int find_ambulance(int graph[MAX_NODES][MAX_NODES],
+                   Ambulance ambulances[], int count, int patient, int *distance);
+int find_hospital(int graph[MAX_NODES][MAX_NODES],
+                  Hospital hospitals[], int count, int patient, int *distance);
 
 #endif
