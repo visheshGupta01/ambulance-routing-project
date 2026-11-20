@@ -92,9 +92,11 @@ int find_ambulance(int graph[MAX_NODES][MAX_NODES],
     for (int i = 0; i < count; i++) {
         if (ambulances[i].available) {
             ShortestPath result = dijkstra(graph, ambulances[i].location);
-            indexes[found] = i;
-            distances[found] = result.distance[patient];
-            found++;
+            if (result.distance[patient] < INF) {
+                indexes[found] = i;
+                distances[found] = result.distance[patient];
+                found++;
+            }
         }
     }
 
@@ -115,7 +117,8 @@ int find_hospital(int graph[MAX_NODES][MAX_NODES],
     ShortestPath result = dijkstra(graph, patient);
 
     for (int i = 0; i < count; i++) {
-        if (hospitals[i].beds > 0) {
+        if (hospitals[i].beds > 0 &&
+            result.distance[hospitals[i].location] < INF) {
             indexes[found] = i;
             distances[found] = result.distance[hospitals[i].location];
             found++;
