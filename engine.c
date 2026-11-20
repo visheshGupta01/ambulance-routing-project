@@ -1,46 +1,41 @@
 #include "engine.h"
 
-DijkstraResult dijkstra(int graph[MAX_NODES][MAX_NODES], int source) {
-    DijkstraResult result;
+/* Dijkstra finds the shortest distance from one location to every location. */
+ShortestPath dijkstra(int graph[MAX_NODES][MAX_NODES], int start) {
+    ShortestPath result;
     int visited[MAX_NODES] = {0};
 
     for (int i = 0; i < MAX_NODES; i++) {
-        result.dist[i] = INF;
-        result.prev[i] = -1;
-    }
-    result.explored = 0;
-
-    if (source < 0 || source >= MAX_NODES) {
-        return result;
+        result.distance[i] = INF;
+        result.previous[i] = -1;
     }
 
-    result.dist[source] = 0;
+    result.distance[start] = 0;
 
     for (int step = 0; step < MAX_NODES; step++) {
         int current = -1;
-        int bestDistance = INF;
 
+        /* Find the unvisited location with the smallest distance. */
         for (int i = 0; i < MAX_NODES; i++) {
-            if (!visited[i] && result.dist[i] < bestDistance) {
-                bestDistance = result.dist[i];
+            if (!visited[i] &&
+                (current == -1 || result.distance[i] < result.distance[current])) {
                 current = i;
             }
         }
 
-        if (current == -1) {
+        if (current == -1 || result.distance[current] == INF)
             break;
-        }
 
         visited[current] = 1;
-        result.explored++;
 
+        /* Check roads connected to the current location. */
         for (int next = 0; next < MAX_NODES; next++) {
-            int roadDistance = graph[current][next];
-
-            if (roadDistance > 0 && !visited[next] &&
-                result.dist[current] + roadDistance < result.dist[next]) {
-                result.dist[next] = result.dist[current] + roadDistance;
-                result.prev[next] = current;
+            if (graph[current][next] > 0 &&
+                result.distance[current] + graph[current][next] <
+                result.distance[next]) {
+                result.distance[next] =
+                    result.distance[current] + graph[current][next];
+                result.previous[next] = current;
             }
         }
     }
@@ -48,119 +43,89 @@ DijkstraResult dijkstra(int graph[MAX_NODES][MAX_NODES], int source) {
     return result;
 }
 
-int reconstruct_path(const DijkstraResult *result, int source, int target,
-                     int path[MAX_NODES]) {
-    int reversePath[MAX_NODES];
+/* Builds the route by following previous[] backwards. */
+int get_path(ShortestPath result, int start, int end, int path[]) {
+    int reverse[MAX_NODES];
     int count = 0;
-    int current = target;
 
-    if (source < 0 || source >= MAX_NODES ||
-        target < 0 || target >= MAX_NODES) {
-        return 0;
-    }
-
-    while (current != -1 && count < MAX_NODES) {
-        reversePath[count++] = current;
-        if (current == source) {
+    while (end != -1 && count < MAX_NODES) {
+        reverse[count++] = end;
+        if (end == start)
             break;
-        }
-        current = result->prev[current];
+        end = result.previous[end];
     }
 
-    if (count == 0 || reversePath[count - 1] != source) {
+    if (reverse[count - 1] != start)
         return 0;
-    }
 
-    for (int i = 0; i < count; i++) {
-        path[i] = reversePath[count - 1 - i];
-    }
+    for (int i = 0; i < count; i++)
+        path[i] = reverse[count - i - 1];
 
     return count;
 }
 
-void insertion_sort_candidates(int ids[], int scores[], int count) {
+/* Insertion sort: arrange candidate indexes by increasing distance. */
+void sort_by_distance(int indexes[], int distances[], int count) {
     for (int i = 1; i < count; i++) {
-        int currentId = ids[i];
-        int currentScore = scores[i];
+        int savedIndex = indexes[i];
+        int savedDistance = distances[i];
         int j = i - 1;
 
-        while (j >= 0 && scores[j] > currentScore) {
-            ids[j + 1] = ids[j];
-            scores[j + 1] = scores[j];
+        while (j >= 0 && distances[j] > savedDistance) {
+            indexes[j + 1] = indexes[j];
+            distances[j + 1] = distances[j];
             j--;
         }
 
-        ids[j + 1] = currentId;
-        scores[j + 1] = currentScore;
+        indexes[j + 1] = savedIndex;
+        distances[j + 1] = savedDistance;
     }
 }
 
-int select_ambulance(int graph[MAX_NODES][MAX_NODES],
-                     Ambulance ambulances[], int count,
-                     int patientNode, int *distance) {
-    int ids[MAX_AMBULANCES];
-    int scores[MAX_AMBULANCES];
-    int candidates = 0;
-
-    if (count < 0 || count > MAX_AMBULANCES ||
-        patientNode < 0 || patientNode >= MAX_NODES) {
-        return -1;
-    }
+/* Return the nearest available ambulance. */
+int find_ambulance(int graph[MAX_NODES][MAX_NODES],
+                   Ambulance ambulances[], int count, int patient, int *distance) {
+    int indexes[MAX_AMBULANCES];
+    int distances[MAX_AMBULANCES];
+    int found = 0;
 
     for (int i = 0; i < count; i++) {
-        if (ambulances[i].available &&
-            ambulances[i].currentNode >= 0 &&
-            ambulances[i].currentNode < MAX_NODES) {
-            DijkstraResult result = dijkstra(graph, ambulances[i].currentNode);
-
-            if (result.dist[patientNode] < INF) {
-                ids[candidates] = i;
-                scores[candidates] = result.dist[patientNode];
-                candidates++;
-            }
+        if (ambulances[i].available) {
+            ShortestPath result = dijkstra(graph, ambulances[i].location);
+            indexes[found] = i;
+            distances[found] = result.distance[patient];
+            found++;
         }
     }
 
-    if (candidates == 0) {
+    if (found == 0)
         return -1;
-    }
 
-    insertion_sort_candidates(ids, scores, candidates);
-    *distance = scores[0];
-    return ids[0];
+    sort_by_distance(indexes, distances, found);
+    *distance = distances[0];
+    return indexes[0];
 }
 
-int select_hospital(int graph[MAX_NODES][MAX_NODES],
-                    Hospital hospitals[], int count,
-                    int patientNode, int *distance) {
-    int ids[MAX_HOSPITALS];
-    int scores[MAX_HOSPITALS];
-    int candidates = 0;
-    DijkstraResult result;
-
-    if (count < 0 || count > MAX_HOSPITALS ||
-        patientNode < 0 || patientNode >= MAX_NODES) {
-        return -1;
-    }
-
-    result = dijkstra(graph, patientNode);
+/* Return the nearest hospital that has at least one bed. */
+int find_hospital(int graph[MAX_NODES][MAX_NODES],
+                  Hospital hospitals[], int count, int patient, int *distance) {
+    int indexes[MAX_HOSPITALS];
+    int distances[MAX_HOSPITALS];
+    int found = 0;
+    ShortestPath result = dijkstra(graph, patient);
 
     for (int i = 0; i < count; i++) {
-        if (hospitals[i].availableBeds > 0 &&
-            hospitals[i].emergencyOpen &&
-            hospitals[i].node >= 0 && hospitals[i].node < MAX_NODES &&
-            result.dist[hospitals[i].node] < INF) {
-            ids[candidates] = i;
-            scores[candidates] = result.dist[hospitals[i].node];
-            candidates++;
+        if (hospitals[i].beds > 0) {
+            indexes[found] = i;
+            distances[found] = result.distance[hospitals[i].location];
+            found++;
         }
     }
 
-    if (candidates == 0) {
+    if (found == 0)
         return -1;
-    }
 
-    insertion_sort_candidates(ids, scores, candidates);
-    *distance = scores[0];
-    return ids[0];
+    sort_by_distance(indexes, distances, found);
+    *distance = distances[0];
+    return indexes[0];
 }
