@@ -1,27 +1,20 @@
-# Algorithm Explanation
+# Algorithms Used
 
-## 1. Graph representation
+## Graph
+The city locations are vertices. Roads are edges, and each edge stores the distance in kilometres. The graph is stored in a two-dimensional array called an adjacency matrix.
 
-The city is represented as a weighted, undirected graph. Each location is a vertex and each road is an edge. The edge weight stores the road distance in kilometres. The graph is stored in an adjacency matrix.
+## Dijkstra's Algorithm
+Dijkstra finds the shortest distance from a starting location to all other locations. It repeatedly chooses the unvisited location with the smallest distance and checks its connected roads.
 
-## 2. Dijkstra's algorithm
+Time complexity: O(V^2), because this version uses an adjacency matrix.
 
-Dijkstra calculates the shortest distance from one source location to every other location. It repeatedly selects the unvisited vertex with the smallest known distance and updates the distances of its neighbours.
+## Greedy Selection
+The program checks available ambulances and chooses the one with the shortest route to the patient. It then chooses the nearest hospital that has at least one bed.
 
-The implementation uses an adjacency matrix and a linear search for the next vertex, so its time complexity is O(V^2).
+## Insertion Sort
+The candidate ambulances and hospitals are arranged from the smallest distance to the largest distance.
 
-## 3. Greedy ambulance selection
+Worst-case time complexity: O(n^2).
 
-The program calculates the distance from each available ambulance to the patient's location. It selects the ambulance with the smallest reachable distance. Busy ambulances are ignored.
-
-## 4. Greedy hospital selection
-
-The program calculates distances from the patient's location to hospitals. Hospitals that are closed or have zero available beds are ignored. The nearest eligible hospital is selected.
-
-## 5. Insertion sort
-
-Candidate ambulance and hospital indexes are sorted by their route distances using insertion sort. The candidate with the smallest distance is selected first. The worst-case time complexity is O(n^2).
-
-## 6. Dispatch update
-
-After a successful dispatch, the selected ambulance becomes unavailable and the selected hospital's available-bed count decreases by one. This is an in-memory simulation; the values reset when the program exits.
+## Dispatch
+After a successful dispatch, the ambulance becomes busy and one bed is removed from the selected hospital's available-bed count. These changes are temporary and reset when the program is started again.
