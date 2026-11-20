@@ -1,69 +1,65 @@
-# Smart Emergency Ambulance Routing System
+# Smart Emergency Ambulance Routing System (C / CLI)
 
-A simple college DAA project with a browser dashboard and a standalone C implementation.
+A simple, menu-driven college DAA project written entirely in C. The program runs in the terminal and demonstrates shortest-path routing and resource selection on a sample city road network.
 
-## Features
-- City road network represented as a weighted graph.
-- Dijkstra's algorithm finds shortest routes.
-- Greedy selection chooses the nearest available ambulance.
-- Greedy selection chooses the nearest hospital with available beds.
-- Insertion Sort ranks candidate routes by distance.
-- Dashboard, dispatch page, ambulance and hospital lists, and a Dijkstra visualizer.
+## Requirements
 
-## Run the website
+- GCC or another C11-compatible compiler
+- Make (optional, for using the Makefile)
 
-Run these commands from the repository root:
+## Compile and run
 
-```bash
-python3 -m http.server 8787
-```
-
-Open **http://localhost:8787** in your browser.
-
-You can also run:
-
-```bash
-chmod +x run.sh
-./run.sh
-```
-
-## Compile and run the C DAA program
-
-Run from the repository root:
+From the repository directory:
 
 ```bash
 make
-./ambulance_engine
+./ambulance_routing
 ```
 
-Or compile manually:
+Or compile directly:
 
 ```bash
-cc -std=c11 -Wall -Wextra -pedantic -O2 main.c engine.c -o ambulance_engine
-./ambulance_engine
+gcc -std=c11 -Wall -Wextra -pedantic -O2 main.c engine.c -o ambulance_routing
+./ambulance_routing
 ```
 
-Clean the generated executable with:
+To compile and run with Make in one command:
+
+```bash
+make run
+```
+
+To remove the compiled executable:
 
 ```bash
 make clean
 ```
 
-## Algorithms used
+## CLI menu
 
-1. **Dijkstra:** Finds minimum distances in the weighted road graph. The simple matrix implementation takes O(V²) time.
-2. **Greedy selection:** Selects the currently closest valid ambulance and hospital using the computed distances.
-3. **Insertion Sort:** Ranks candidate indexes by route cost; worst-case time is O(n²).
-4. **Constraint checks:** Skips unavailable ambulances and hospitals without beds.
+1. Display the city road network.
+2. Find the shortest route between two locations.
+3. Dispatch the nearest available ambulance to a patient and select the nearest hospital with available beds.
+4. View ambulance and hospital status.
+5. Exit.
 
-## Project structure
+After a successful dispatch, the selected ambulance is marked as dispatched and one bed is deducted from the selected hospital. These changes remain only while the program is running; the sample project does not use a database or save data between runs.
 
-- `index.html` - dashboard pages and layout
-- `style.css` - dashboard styling
-- `app.js` - browser-side routing and interactions
-- `main.c` - sample graph and C program entry point
-- `engine.c` / `engine.h` - DAA algorithms and data structures
-- `Makefile` - C build commands
-- `run.sh` - starts the local website
+## Algorithms
 
-The website is a local simulation. It does not connect to real ambulance GPS, hospital systems, or emergency services.
+- **Dijkstra's algorithm:** Finds shortest distances in the weighted road graph. This adjacency-matrix implementation takes O(V^2) time.
+- **Greedy selection:** Chooses the available ambulance with the smallest distance to the patient and the nearest eligible hospital.
+- **Insertion sort:** Sorts candidate resources by route distance. Its worst-case time is O(n^2).
+
+## Project files
+
+| File | Purpose |
+|---|---|
+| `main.c` | CLI menu, sample road network, dispatch workflow |
+| `engine.c` | Dijkstra, path reconstruction, greedy selection and insertion sort |
+| `engine.h` | Structures, constants and function declarations |
+| `Makefile` | Build, run and clean commands |
+
+## Important note
+
+This is an academic simulation using sample locations, distances, ambulances and hospitals. It is not connected to live GPS, ambulance services, hospital systems or emergency dispatch infrastructure.
