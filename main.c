@@ -1,212 +1,178 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include "engine.h"
 
 #define AMBULANCE_COUNT 6
 #define HOSPITAL_COUNT 4
 
-static const char *locations[MAX_NODES] = {
+/* The city has 12 locations. */
+char *locations[MAX_NODES] = {
     "University", "Main Market", "Railway Station", "City Center",
     "Residential Area", "Industrial Area", "Highway Junction",
     "Hospital Zone", "Airport Road", "North Square",
     "Medical District", "East Colony"
 };
 
-static void add_road(int graph[MAX_NODES][MAX_NODES], int a, int b, int km) {
-    graph[a][b] = km;
-    graph[b][a] = km;
+void add_road(int graph[MAX_NODES][MAX_NODES], int a, int b, int distance) {
+    graph[a][b] = distance;
+    graph[b][a] = distance;
 }
 
-static int read_number(const char *message, int minimum, int maximum) {
-    char input[100];
-    char *end;
-    long value;
+/* Read a menu choice or location number. */
+int read_number(char message[], int min, int max) {
+    int number;
 
     while (1) {
         printf("%s", message);
 
-        if (fgets(input, sizeof(input), stdin) == NULL) {
-            return -1;
+        if (scanf("%d", &number) != 1) {
+            if (feof(stdin))
+                return -1;
+            printf("Please enter a number.\n");
+            while (getchar() != '\n');
+            continue;
         }
 
-        value = strtol(input, &end, 10);
-        while (*end == ' ' || *end == '\t' || *end == '\n' || *end == '\r') {
-            end++;
-        }
+        while (getchar() != '\n');
 
-        if (end != input && *end == '\0' &&
-            value >= minimum && value <= maximum) {
-            return (int)value;
-        }
+        if (number >= min && number <= max)
+            return number;
 
-        printf("Invalid input. Enter a number from %d to %d.\n",
-               minimum, maximum);
+        printf("Choose a number between %d and %d.\n", min, max);
     }
 }
 
-static void show_locations(void) {
+void show_locations(void) {
     printf("\nCITY LOCATIONS\n");
-    printf("------------------------------\n");
-    for (int i = 0; i < MAX_NODES; i++) {
-        printf("%2d. %s\n", i + 1, locations[i]);
-    }
+    for (int i = 0; i < MAX_NODES; i++)
+        printf("%d. %s\n", i + 1, locations[i]);
 }
 
-static void show_roads(int graph[MAX_NODES][MAX_NODES]) {
-    printf("\nROAD NETWORK (DISTANCE IN KM)\n");
-    printf("----------------------------------------------\n");
+void show_roads(int graph[MAX_NODES][MAX_NODES]) {
+    printf("\nROAD NETWORK\n");
     for (int i = 0; i < MAX_NODES; i++) {
         for (int j = i + 1; j < MAX_NODES; j++) {
-            if (graph[i][j] > 0) {
-                printf("%-20s <-> %-20s %2d km\n",
+            if (graph[i][j] > 0)
+                printf("%s <-> %s : %d km\n",
                        locations[i], locations[j], graph[i][j]);
-            }
         }
     }
 }
 
-static void show_path(const int path[], int count) {
+void print_path(int path[], int count) {
     for (int i = 0; i < count; i++) {
         printf("%s", locations[path[i]]);
-        if (i + 1 < count) {
+        if (i < count - 1)
             printf(" -> ");
-        }
     }
     printf("\n");
 }
 
-static void find_shortest_route(int graph[MAX_NODES][MAX_NODES]) {
-    int source, destination, path[MAX_NODES], count;
-    DijkstraResult result;
+void shortest_route(int graph[MAX_NODES][MAX_NODES]) {
+    int start, end, path[MAX_NODES], count;
+    ShortestPath result;
 
     show_locations();
-    source = read_number("\nEnter source location number: ", 1, MAX_NODES);
-    if (source == -1) return;
-    destination = read_number("Enter destination location number: ",
-                              1, MAX_NODES);
-    if (destination == -1) return;
+    start = read_number("Starting location: ", 1, MAX_NODES) - 1;
+    if (start < 0) return;
 
-    source--;
-    destination--;
-    result = dijkstra(graph, source);
-    count = reconstruct_path(&result, source, destination, path);
+    end = read_number("Destination: ", 1, MAX_NODES) - 1;
+    if (end < 0) return;
 
-    printf("\nSHORTEST ROUTE RESULT\n");
-    printf("------------------------------\n");
+    result = dijkstra(graph, start);
+    count = get_path(result, start, end, path);
+
     if (count == 0) {
-        printf("No route exists between these locations.\n");
+        printf("No route found.\n");
         return;
     }
 
-    printf("Route: ");
-    show_path(path, count);
-    printf("Total distance: %d km\n", result.dist[destination]);
-    printf("Locations explored by Dijkstra: %d\n", result.explored);
+    printf("\nShortest route: ");
+    print_path(path, count);
+    printf("Distance: %d km\n", result.distance[end]);
 }
 
-static void show_resources(const Ambulance ambulances[],
-                           const Hospital hospitals[]) {
-    printf("\nAMBULANCE STATUS\n");
-    printf("----------------------------------------------\n");
-    printf("%-12s %-25s %-18s\n", "ID", "Current location", "Status");
+void show_resources(Ambulance ambulances[], Hospital hospitals[]) {
+    printf("\nAMBULANCES\n");
     for (int i = 0; i < AMBULANCE_COUNT; i++) {
-        printf("%-12s %-25s %-18s\n",
-               ambulances[i].name,
-               locations[ambulances[i].currentNode],
-               ambulances[i].available ? "Available" : "Dispatched");
+        printf("%s | %s | %s\n", ambulances[i].name,
+               locations[ambulances[i].location],
+               ambulances[i].available ? "Available" : "Busy");
     }
 
-    printf("\nHOSPITAL STATUS\n");
-    printf("----------------------------------------------\n");
-    printf("%-25s %-20s %s\n", "Hospital", "Location", "Beds");
+    printf("\nHOSPITALS\n");
     for (int i = 0; i < HOSPITAL_COUNT; i++) {
-        printf("%-25s %-20s %d\n",
-               hospitals[i].name,
-               locations[hospitals[i].node],
-               hospitals[i].availableBeds);
+        printf("%s | %s | Beds: %d\n", hospitals[i].name,
+               locations[hospitals[i].location], hospitals[i].beds);
     }
 }
 
-static void dispatch_emergency(int graph[MAX_NODES][MAX_NODES],
-                               Ambulance ambulances[],
-                               Hospital hospitals[]) {
-    int patientNode, ambulanceDistance, hospitalDistance;
-    int ambulanceIndex, hospitalIndex;
-    int ambulancePath[MAX_NODES], hospitalPath[MAX_NODES];
-    int ambulancePathCount, hospitalPathCount;
-    DijkstraResult ambulanceResult, hospitalResult;
+void dispatch(int graph[MAX_NODES][MAX_NODES],
+              Ambulance ambulances[], Hospital hospitals[]) {
+    int patient, ambulance, hospital;
+    int ambulanceDistance, hospitalDistance;
+    int path[MAX_NODES], count;
+    ShortestPath result;
 
     show_locations();
-    patientNode = read_number("\nEnter patient location number: ",
-                              1, MAX_NODES);
-    if (patientNode == -1) return;
-    patientNode--;
+    patient = read_number("Patient location: ", 1, MAX_NODES) - 1;
+    if (patient < 0) return;
 
-    ambulanceIndex = select_ambulance(graph, ambulances, AMBULANCE_COUNT,
-                                      patientNode, &ambulanceDistance);
-    if (ambulanceIndex == -1) {
-        printf("\nNo available ambulance can reach this location.\n");
+    ambulance = find_ambulance(graph, ambulances, AMBULANCE_COUNT,
+                               patient, &ambulanceDistance);
+    hospital = find_hospital(graph, hospitals, HOSPITAL_COUNT,
+                             patient, &hospitalDistance);
+
+    if (ambulance == -1) {
+        printf("No ambulance is available.\n");
         return;
     }
 
-    hospitalIndex = select_hospital(graph, hospitals, HOSPITAL_COUNT,
-                                    patientNode, &hospitalDistance);
-    if (hospitalIndex == -1) {
-        printf("\nNo open hospital with available beds can be reached.\n");
+    if (hospital == -1) {
+        printf("No hospital has an available bed.\n");
         return;
     }
 
-    ambulanceResult = dijkstra(graph, ambulances[ambulanceIndex].currentNode);
-    hospitalResult = dijkstra(graph, patientNode);
-    ambulancePathCount = reconstruct_path(
-        &ambulanceResult, ambulances[ambulanceIndex].currentNode,
-        patientNode, ambulancePath);
-    hospitalPathCount = reconstruct_path(
-        &hospitalResult, patientNode, hospitals[hospitalIndex].node,
-        hospitalPath);
+    printf("\nAMBULANCE DISPATCHED\n");
+    printf("Ambulance: %s\n", ambulances[ambulance].name);
 
-    if (ambulancePathCount == 0 || hospitalPathCount == 0) {
-        printf("\nDispatch cancelled: route calculation failed.\n");
-        return;
-    }
+    result = dijkstra(graph, ambulances[ambulance].location);
+    count = get_path(result, ambulances[ambulance].location, patient, path);
+    printf("Ambulance route: ");
+    print_path(path, count);
+    printf("Distance to patient: %d km\n", ambulanceDistance);
 
-    printf("\nEMERGENCY DISPATCH CONFIRMED\n");
-    printf("==============================================\n");
-    printf("Selected ambulance: %s\n", ambulances[ambulanceIndex].name);
-    printf("Ambulance to patient (%d km): ", ambulanceDistance);
-    show_path(ambulancePath, ambulancePathCount);
+    printf("Hospital: %s\n", hospitals[hospital].name);
+    result = dijkstra(graph, patient);
+    count = get_path(result, patient, hospitals[hospital].location, path);
+    printf("Hospital route: ");
+    print_path(path, count);
+    printf("Distance to hospital: %d km\n", hospitalDistance);
 
-    printf("Selected hospital: %s\n", hospitals[hospitalIndex].name);
-    printf("Patient to hospital (%d km): ", hospitalDistance);
-    show_path(hospitalPath, hospitalPathCount);
+    printf("Total distance: %d km\n", ambulanceDistance + hospitalDistance);
 
-    printf("Total travel distance: %d km\n",
-           ambulanceDistance + hospitalDistance);
-    printf("Algorithms: Dijkstra + Greedy Selection + Insertion Sort\n");
-
-    /* Update the demo data so the next dispatch sees the changed resources. */
-    ambulances[ambulanceIndex].available = 0;
-    hospitals[hospitalIndex].availableBeds--;
-
-    printf("\nResource status updated for this program session.\n");
+    /* Update the selected ambulance and hospital. */
+    ambulances[ambulance].available = 0;
+    hospitals[hospital].beds--;
 }
 
 int main(void) {
     int graph[MAX_NODES][MAX_NODES] = {{0}};
-    Ambulance ambulances[AMBULANCE_COUNT] = {
-        {101, "AMB-101", 1, 0}, {102, "AMB-102", 0, 3},
-        {103, "AMB-103", 1, 5}, {104, "AMB-104", 1, 8},
-        {105, "AMB-105", 0, 10}, {106, "AMB-106", 1, 11}
-    };
-    Hospital hospitals[HOSPITAL_COUNT] = {
-        {1, "City Hospital", 7, 12, 1},
-        {2, "Central Medical Center", 9, 0, 1},
-        {3, "University Hospital", 10, 7, 1},
-        {4, "North Trauma Center", 2, 5, 1}
-    };
     int choice;
 
+    Ambulance ambulances[AMBULANCE_COUNT] = {
+        {"AMB-101", 0, 1}, {"AMB-102", 3, 0},
+        {"AMB-103", 5, 1}, {"AMB-104", 8, 1},
+        {"AMB-105", 10, 0}, {"AMB-106", 11, 1}
+    };
+
+    Hospital hospitals[HOSPITAL_COUNT] = {
+        {"City Hospital", 7, 12},
+        {"Central Medical Center", 9, 0},
+        {"University Hospital", 10, 7},
+        {"North Trauma Center", 2, 5}
+    };
+
+    /* Add roads and their distances to the graph. */
     add_road(graph, 0, 1, 4);
     add_road(graph, 0, 2, 7);
     add_road(graph, 1, 3, 3);
@@ -226,37 +192,32 @@ int main(void) {
     add_road(graph, 10, 11, 2);
     add_road(graph, 7, 11, 6);
 
-    printf("==============================================\n");
-    printf("   SMART EMERGENCY AMBULANCE ROUTING SYSTEM\n");
-    printf("             C LANGUAGE | CLI\n");
-    printf("==============================================\n");
+    printf("\nSMART AMBULANCE ROUTING SYSTEM\n");
 
     do {
-        printf("\nMAIN MENU\n");
-        printf("1. Display city road network\n");
-        printf("2. Find shortest route (Dijkstra)\n");
-        printf("3. Dispatch an emergency ambulance\n");
-        printf("4. View ambulances and hospitals\n");
+        printf("\n1. Show road network\n");
+        printf("2. Find shortest route\n");
+        printf("3. Dispatch ambulance\n");
+        printf("4. Show ambulances and hospitals\n");
         printf("5. Exit\n");
 
-        choice = read_number("Enter your choice: ", 1, 5);
-        if (choice == -1) break;
+        choice = read_number("Enter choice: ", 1, 5);
 
         switch (choice) {
             case 1:
                 show_roads(graph);
                 break;
             case 2:
-                find_shortest_route(graph);
+                shortest_route(graph);
                 break;
             case 3:
-                dispatch_emergency(graph, ambulances, hospitals);
+                dispatch(graph, ambulances, hospitals);
                 break;
             case 4:
                 show_resources(ambulances, hospitals);
                 break;
             case 5:
-                printf("\nThank you for using the system. Goodbye!\n");
+                printf("Goodbye!\n");
                 break;
         }
     } while (choice != 5);
