@@ -1,37 +1,69 @@
-# Smart Emergency Ambulance Routing & Hospital Allocation System
+# Smart Emergency Ambulance Routing System
 
-College DAA project demonstrating a working emergency-routing dashboard and a standalone C algorithm engine.
+A simple college DAA project with a browser dashboard and a standalone C implementation.
 
-## Algorithms
-- Dijkstra's shortest path algorithm: route calculation on a weighted city graph.
-- Greedy selection: chooses the closest valid available ambulance and hospital after shortest-path costs are computed.
-- Insertion Sort: ranks candidate costs in the C engine.
-- Constraint checks: excludes busy ambulances and full/closed hospitals.
+## Features
+- City road network represented as a weighted graph.
+- Dijkstra's algorithm finds shortest routes.
+- Greedy selection chooses the nearest available ambulance.
+- Greedy selection chooses the nearest hospital with available beds.
+- Insertion Sort ranks candidate routes by distance.
+- Dashboard, dispatch page, ambulance and hospital lists, and a Dijkstra visualizer.
 
-## Run the website on macOS
+## Run the website
+
+Run these commands from the repository root:
+
 ```bash
-cd Smart-Ambulance-Routing
 python3 -m http.server 8787
 ```
-Open: http://localhost:8787
 
-## Compile and run the C DAA engine
+Open **http://localhost:8787** in your browser.
+
+You can also run:
+
 ```bash
-cd algorithm
+chmod +x run.sh
+./run.sh
+```
+
+## Compile and run the C DAA program
+
+Run from the repository root:
+
+```bash
 make
 ./ambulance_engine
 ```
-Or without Make:
+
+Or compile manually:
+
 ```bash
 cc -std=c11 -Wall -Wextra -pedantic -O2 main.c engine.c -o ambulance_engine
 ./ambulance_engine
 ```
 
-## Viva summary
-The city is modeled as a weighted graph: vertices are locations and edges are roads. Dijkstra computes shortest routes. A greedy strategy selects the currently best valid ambulance/hospital based on those route costs. Insertion Sort ranks candidates in the C implementation. Capacity and availability checks prevent invalid assignments.
+Clean the generated executable with:
 
-## Main frontend features
-Dashboard, city graph, emergency creation, deterministic dispatch, ambulance management view, hospital capacity view, Dijkstra visualizer, and DAA analysis.
+```bash
+make clean
+```
 
-## Notes
-The browser uses JavaScript to visualize the same scheduling/routing workflow interactively. The official standalone DAA implementation is in C under `algorithm/`.
+## Algorithms used
+
+1. **Dijkstra:** Finds minimum distances in the weighted road graph. The simple matrix implementation takes O(V²) time.
+2. **Greedy selection:** Selects the currently closest valid ambulance and hospital using the computed distances.
+3. **Insertion Sort:** Ranks candidate indexes by route cost; worst-case time is O(n²).
+4. **Constraint checks:** Skips unavailable ambulances and hospitals without beds.
+
+## Project structure
+
+- `index.html` - dashboard pages and layout
+- `style.css` - dashboard styling
+- `app.js` - browser-side routing and interactions
+- `main.c` - sample graph and C program entry point
+- `engine.c` / `engine.h` - DAA algorithms and data structures
+- `Makefile` - C build commands
+- `run.sh` - starts the local website
+
+The website is a local simulation. It does not connect to real ambulance GPS, hospital systems, or emergency services.
