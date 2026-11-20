@@ -202,6 +202,8 @@ int main(void) {
         printf("5. Exit\n");
 
         choice = read_number("Enter choice: ", 1, 5);
+        if (choice == -1)
+            break;
 
         switch (choice) {
             case 1:
